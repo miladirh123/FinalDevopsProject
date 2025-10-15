@@ -1,12 +1,18 @@
 {
   "name": "fprojectdevops",
   "version": "1.0.0",
-  "description": "",
+  "description": "Projet Node.js minimal pour test",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["nodejs", "devops", "test"],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
 }

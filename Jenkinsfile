@@ -8,9 +8,8 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-west-2'
-        SONAR_PROJECT_KEY = 'DevopsFProjecttt'
+        SONAR_PROJECT_KEY = 'Dev-app'
         SONAR_SCANNER_PATH = 'C:\\sonar-scanner\\bin\\sonar-scanner.bat'
-        SONAR_HOST_URL = 'http://localhost:9000'
     }
 
     stages {
@@ -99,13 +98,14 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
-                    bat """
-                        %SONAR_SCANNER_PATH% ^
-                        -Dsonar.projectKey=%SONAR_PROJECT_KEY% ^
-                        -Dsonar.sources=. ^
-                        -Dsonar.host.url=%SONAR_HOST_URL% ^
-                        -Dsonar.token=%SONAR_TOKEN%
-                    """
+                    withSonarQubeEnv('SonarQube') {
+                        bat """
+                            %SONAR_SCANNER_PATH% ^
+                            -Dsonar.projectKey=%SONAR_PROJECT_KEY% ^
+                            -Dsonar.sources=. ^
+                            -Dsonar.token=%SONAR_TOKEN%
+                        """
+                    }
                 }
             }
         }

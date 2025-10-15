@@ -8,6 +8,9 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-west-2'
+        SONAR_PROJECT_KEY = 'FinalDevopsProject'
+        SONAR_SCANNER_PATH = 'C:\\sonar-scanner\\bin\\sonar-scanner.bat'
+        SONAR_HOST_URL = 'http://localhost:9000'
     }
 
     stages {
@@ -58,7 +61,6 @@ pipeline {
                                     input message: "Souhaitez-vous appliquer ce plan Terraform ?",
                                     parameters: [text(name: 'Plan', description: 'Veuillez examiner le plan Terraform', defaultValue: plan)]
                                 }
-
                                 bat 'terraform apply -input=false tfplan'
                             } else if (params.action == 'destroy') {
                                 bat """
@@ -88,6 +90,29 @@ pipeline {
             steps {
                 dir('Terraform') {
                     bat 'terraform output -raw public_ip > ec2_ip.txt'
+                }
+            }
+        }
+
+        // ----------------- SonarQube -----------------
+        stage('SonarQube Analysis') {
+            steps {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    bat """
+                        %SONAR_SCANNER_PATH% ^
+                        -Dsonar.projectKey=%SONAR_PROJECT_KEY% ^
+                        -Dsonar.sources=. ^
+                        -Dsonar.host.url=%SONAR_HOST_URL% ^
+                        -Dsonar.login=%SONAR_TOKEN%
+                    """
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }

@@ -7,11 +7,17 @@ provider "aws" {
 data "aws_vpc" "default" {
   default = true
 }
-
 resource "aws_security_group" "web_sg" {
-  name        = "web-sg-${var.environment}"
+  name        = "web-sg-${var.environment}-${random_id.suffix.hex}"
   description = "Allow SSH and HTTP"
   vpc_id      = data.aws_vpc.default.id
+  ...
+}
+
+resource "random_id" "suffix" {
+  byte_length = 2
+}
+
 
   ingress {
     from_port   = 22

@@ -95,7 +95,20 @@ pipeline {
         }
 
         // ----------------- SonarQube -----------------
- 
+
+        stage('SonarQube Analysis') {
+            steps {
+                withCredentials([string(credentialsId: 'SONAR_TOKEN	', variable: 'SONAR_TOKEN')]) {
+                    bat """
+                        %SONAR_SCANNER_PATH% ^
+                        -Dsonar.projectKey=%SONAR_PROJECT_KEY% ^
+                        -Dsonar.sources=. ^
+                        -Dsonar.host.url=http://localhost:9000 ^
+                        -Dsonar.login=%SONAR_TOKEN%
+                    """
+                }
+            }
+        }
 
 
         stage('Quality Gate') {

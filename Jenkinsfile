@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-west-2'
-        SONAR_PROJECT_KEY = 'FinalDevopsProject'
+        SONAR_PROJECT_KEY = 'DevopsFProjecttt'
         SONAR_SCANNER_PATH = 'C:\\sonar-scanner\\bin\\sonar-scanner.bat'
         SONAR_HOST_URL = 'http://localhost:9000'
     }

@@ -1,11 +1,18 @@
-# Image de base avec Java (nécessaire pour Android APK ou Gradle)
-FROM openjdk:17-jdk-slim
+# Utiliser une image Node officielle
+FROM node:18
 
-# Crée le dossier pour l'APK
-WORKDIR /app
+# Créer un dossier de travail
+WORKDIR /usr/src/app
 
-# Copie l'APK depuis le job GitLab CI
-COPY app-release.apk /app/app.apk
+# Copier package.json et installer les dépendances
+COPY package*.json ./
+RUN npm install
 
-# Commande par défaut
-CMD ["echo", "APK deployed successfully at /app/app.apk"]
+# Copier le reste du code
+COPY . .
+
+# Exposer le port
+EXPOSE 3000
+
+# Commande de démarrage
+CMD ["npm", "start"]

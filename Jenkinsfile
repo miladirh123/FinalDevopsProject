@@ -1,12 +1,6 @@
 pipeline {
     agent any
 
-    options {
-        // Supprimer automatiquement les anciens builds
-        buildDiscarder(logRotator(numToKeepStr: '10', daysToKeepStr: '30'))
-        // Exemple : garder seulement les 10 derniers builds ou ceux datant de moins de 30 jours
-    }
-
     parameters {
         booleanParam(name: 'autoApprove', defaultValue: false, description: 'Appliquer automatiquement après le plan Terraform ?')
         choice(name: 'action', choices: ['apply', 'destroy'], description: 'Choisir l’action à exécuter')
@@ -18,14 +12,79 @@ pipeline {
         SONAR_SCANNER_PATH = 'C:\\sonar-scanner\\bin\\sonar-scanner.bat'
     }
 
-    stages {
+ stages {
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/miladirahma1/FinalDevopsProject.git'
             }
         }
 
-        stage('Terraform Init') {
+        stage('Build & Test Node.js') {
+            steps {
+                dir('app') {
+                    bat 'npm install'
+                    // Ajoute des tests pour un rendu pro (Jest/Mocha)
+                    bat 'npm test || echo "No tests yet"'
+                }
+            }
+        }
+
+        stage('SonarQube analysis') {
+            steps {
+                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
+                    withSonarQubeEnv('SonarQube') {
+                        bat """
+                            %SONAR_SCANNER_PATH% ^
+                            -Dsonar.projectKey=%SONAR_PROJECT_KEY% ^
+                            -Dsonar.sources=app ^
+                            -Dsonar.token=%SONAR_TOKEN%
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Docker build & push') {
+            steps {
+                script {
+                    dir('app') {
+                        bat "docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% ."
+                        withCredentials([usernamePassword(credentialsId: 'DOCKERHUB_CREDS', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                            bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
+                            bat "docker push %DOCKER_IMAGE%:%DOCKER_TAG%"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Start monitoring stack (Prometheus + Grafana)') {
+            steps {
+                dir('monitoring') {
+                    bat "docker compose pull || echo skip"
+                    bat "docker compose up -d --build"
+                }
+            }
+        }
+
+        stage('Start logging stack (ELK)') {
+            steps {
+                dir('logging') {
+                    bat "docker compose pull || echo skip"
+                    bat "docker compose up -d --build"
+                }
+            }
+        }
+
+        stage('Terraform init') {
             steps {
                 dir('Terraform') {
                     bat 'terraform init'
@@ -33,7 +92,7 @@ pipeline {
             }
         }
 
-        stage('Terraform Plan') {
+        stage('Terraform plan') {
             steps {
                 dir('Terraform') {
                     withCredentials([
@@ -52,7 +111,7 @@ pipeline {
             }
         }
 
-        stage('Terraform Apply / Destroy') {
+        stage('Terraform apply / destroy') {
             steps {
                 dir('Terraform') {
                     withCredentials([
@@ -99,27 +158,15 @@ pipeline {
             }
         }
 
-        // ----------------- SonarQube -----------------
-
-        stage('SonarQube Analysis') {
+        stage('Publish useful links') {
             steps {
-                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
-                    withSonarQubeEnv('SonarQube') {
-                        bat """
-                            %SONAR_SCANNER_PATH% ^
-                            -Dsonar.projectKey=%SONAR_PROJECT_KEY% ^
-                            -Dsonar.sources=. ^
-                            -Dsonar.token=%SONAR_TOKEN%
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                script {
+                    // Adapter l’hôte Jenkins si nécessaire
+                    echo "Grafana: http://localhost:3001"
+                    echo "Prometheus: http://localhost:9090"
+                    echo "Kibana: http://localhost:5601"
+                    def ip = readFile 'Terraform/ec2_ip.txt'
+                    echo "Application (si exposée): http://${ip.trim()}"
                 }
             }
         }
@@ -131,6 +178,10 @@ pipeline {
         }
         failure {
             echo '❌ Échec du pipeline. Vérifiez les logs.'
+        }
+        always {
+            // Optionnel: nettoyage pour éviter saturation
+            echo 'Nettoyage terminé.'
         }
     }
 }

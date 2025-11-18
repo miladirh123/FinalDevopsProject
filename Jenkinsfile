@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    options {
+        // Supprimer automatiquement les anciens builds
+        buildDiscarder(logRotator(numToKeepStr: '10', daysToKeepStr: '30'))
+        // Exemple : garder seulement les 10 derniers builds ou ceux datant de moins de 30 jours
+    }
+
     parameters {
         booleanParam(name: 'autoApprove', defaultValue: false, description: 'Appliquer automatiquement après le plan Terraform ?')
         choice(name: 'action', choices: ['apply', 'destroy'], description: 'Choisir l’action à exécuter')
@@ -15,7 +21,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/miladirh123/FinalDevopsProject.git'
+                git branch: 'main', url: 'https://github.com/miladirahma1/FinalDevopsProject.git'
             }
         }
 

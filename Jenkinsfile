@@ -11,7 +11,7 @@ pipeline {
         SONAR_PROJECT_KEY = 'Dev-app'
         SONAR_SCANNER_PATH = 'C:\\sonar-scanner\\bin\\sonar-scanner.bat'
         DOCKER_IMAGE = 'rahmam123/devapp'  
-            *DOCKER_TAG = 'latest'                           // ou un numéro de version
+        DOCKER_TAG = 'latest'                           // ou un numéro de version
     }
 
  stages {
